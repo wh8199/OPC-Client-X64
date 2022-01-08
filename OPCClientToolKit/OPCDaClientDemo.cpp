@@ -4,23 +4,21 @@
 /*
 OPCClientToolKit
 Copyright (C) 2005 Mark C. Beharrell
-
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
 License as published by the Free Software Foundation; either
 version 2 of the License, or (at your option) any later version.
-
 This library is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 Library General Public License for more details.
-
 You should have received a copy of the GNU Library General Public
 License along with this library; if not, write to the
 Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 Boston, MA  02111-1307, USA.
 */
 
+#include <iostream>
 #include <stdio.h>
 #include <sys\timeb.h>
 
@@ -44,77 +42,8 @@ Boston, MA  02111-1307, USA.
  * 9) Sync read of multiple OPC items.
  */
 
-/**
- * Handle async data coming from changes in the OPC group
- */
-class CMyCallback : public IAsyncDataCallback
-{
-  public:
-    void OnDataChange(COPCGroup &group, COPCItemDataMap &changes)
-    {
-        printf("group '%ws', item(s) changed:\n", group.getName().c_str());
-        POSITION pos = changes.GetStartPosition();
-        while (pos)
-        {
-            OPCHANDLE handle = changes.GetKeyAt(pos);
-            OPCItemData *data = changes.GetNextValue(pos);
-
-            if (data)
-            {
-                const COPCItem *item = data->item(); // retrieve original item pointer from item data..
-
-                if (item)
-                {
-                    printf("-----> '%ws', handle: %u, changed async read quality %d value %d\n",
-                           item->getName().c_str(), handle, data->wQuality, data->vDataValue.iVal);
-                }
-            } // if
-        }     // while
-
-    } // OnDataChange
-
-}; // CMyCallback
-
-/**
- *	Handle completion of async operation
- */
-class CTransComplete : public ITransactionComplete
-{
-  private:
-    std::string CompletionMessage;
-
-  public:
-    CTransComplete()
-    {
-        CompletionMessage = "async operation completed";
-    }
-
-    void complete(CTransaction &)
-    {
-        printf("%s\n", CompletionMessage.c_str());
-    }
-
-    void setCompletionMessage(const std::string &message)
-    {
-        CompletionMessage = message;
-    }
-
-}; // CTransComplete
-
 //---------------------------------------------------------
 // main
-
-#define MESSAGE_PUMP_UNTIL(x)                                                                                          \
-    while (!x)                                                                                                         \
-    {                                                                                                                  \
-        MSG msg;                                                                                                       \
-        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))                                                            \
-        {                                                                                                              \
-            TranslateMessage(&msg);                                                                                    \
-            DispatchMessage(&msg);                                                                                     \
-        }                                                                                                              \
-        Sleep(10);                                                                                                     \
-    } // while
 
 void main(void)
 {
@@ -157,48 +86,35 @@ void main(void)
     }
     std::wstring serverName = localServerList[server_id];
     printf("server name: '%ws'\n", serverName.c_str());
-    COPCServer *opcServer = host->connectDAServer(serverName);
 
-    // check server status
-    ServerStatus status = {0};
-    const char *serverStateMsg[] = {"unknown", "running", "failed", "co-config", "suspended", "test", "comm-fault"};
-    do
+    /*
+    COPCClient c;
+    int ret = c.Init(localServerList[server_id], c_string);
+    if (ret < 0)
     {
-        Sleep(100);
-        opcServer->getStatus(status);
-        printf("server state is %s, vendor is '%ws'\r", serverStateMsg[status.dwServerState],
-               status.vendorInfo.c_str());
-    } while (status.dwServerState != OPC_STATUS_RUNNING);
-
-    // browse server
-    std::vector<std::wstring> opcItemNames;
-    opcServer->getItemNames(opcItemNames);
-    printf("\n\ngot %d names:\n", static_cast<int>(opcItemNames.size()));
-    for (unsigned i = 0; i < opcItemNames.size(); ++i)
-    {
-        printf("%3d: '%ws'\n", i + 1, opcItemNames[i].c_str());
+        perror("init opc client failed");
+        exit(-1);
     }
 
-    // make demo group
-    unsigned long refreshRate;
-    COPCGroup *demoGroup = opcServer->makeGroup(L"DemoGroup", true, 1000, refreshRate, 0.0);
-
-    // make a single item
-    std::wstring itemName = opcItemNames[5];
-    COPCItem *readWritableItem = demoGroup->addItem(itemName, true);
-
-    // make several items
-    std::vector<std::wstring> itemNames;
-    std::vector<COPCItem *> itemsCreated;
-    std::vector<HRESULT> errors;
-
-    itemNames.push_back(opcItemNames[21]); // 15 -> Bucket Brigade.UInt2
-    itemNames.push_back(opcItemNames[22]); // 16 -> Bucket Brigade.UInt4
-    if (demoGroup->addItems(itemNames, itemsCreated, errors, true) != 0)
+    while (true)
     {
-        printf("add items to group FAILED\n");
-    }
+        gets_s(c_string);
 
+        if (c_string == "quit")
+        {
+            break;
+        }
+
+        // make a single item
+        std::wstring itemName = COPCHost::S2WS(c_string);
+        ret = c.ReadItem(std::move(itemName));
+        if (ret < 0)
+        {
+            perror("read item failed");
+        }
+    }*/
+
+    /*
     // get properties
     std::vector<CPropertyDescription> propDesc;
     readWritableItem->getSupportedProperties(propDesc);
@@ -246,13 +162,20 @@ void main(void)
                 break;
             } // switch
         }
-    } // else
+    } // else*/
 
-    // sync read of item
-    OPCItemData data;
-    readWritableItem->readSync(data, OPC_DS_DEVICE);
-    printf("-----> '%ws', handle: %u, item sync read quality %u value %d\n", readWritableItem->getName().c_str(),
-           readWritableItem->getHandle(), data.wQuality, data.vDataValue.iVal);
+    /*
+    // make several items
+    std::vector<std::wstring> itemNames;
+    std::vector<COPCItem *> itemsCreated;
+    std::vector<HRESULT> errors;
+
+    itemNames.push_back(opcItemNames[21]); // 15 -> Bucket Brigade.UInt2
+    itemNames.push_back(opcItemNames[22]); // 16 -> Bucket Brigade.UInt4
+    if (demoGroup->addItems(itemNames, itemsCreated, errors, true) != 0)
+    {
+        printf("add items to group FAILED\n");
+    }
 
     // sync read on demo group
     COPCItemDataMap itemDataMap;
@@ -342,6 +265,5 @@ void main(void)
 
     // just loop - changes to items within demo group are picked up here
 
-    MESSAGE_PUMP_UNTIL(false)
-
+    MESSAGE_PUMP_UNTIL(false)*/
 } // main
