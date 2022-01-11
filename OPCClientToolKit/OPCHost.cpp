@@ -41,7 +41,7 @@ COPCHost::~COPCHost()
 {
 } // COPCHost::~COPCHost
 
-void COPCHost::makeCOMObjectEx(std::wstring hostName, tagCLSCTX serverLocation, const IID requestedClass,
+HRESULT COPCHost::makeCOMObjectEx(std::wstring hostName, tagCLSCTX serverLocation, const IID requestedClass,
                                const IID requestedInterface, void **interfacePtr)
 {
     COAUTHINFO authn = {0};
@@ -58,7 +58,6 @@ void COPCHost::makeCOMObjectEx(std::wstring hostName, tagCLSCTX serverLocation, 
     CW2W wstr(hostName.c_str());
     requestedServerInfo.pwszName = wstr;
     requestedServerInfo.pAuthInfo = &authn;
-    printf("server name: '%ws'\n", requestedServerInfo.pwszName);
 
     MULTI_QI reqInterface;
     reqInterface.pIID = &requestedInterface;
@@ -69,40 +68,42 @@ void COPCHost::makeCOMObjectEx(std::wstring hostName, tagCLSCTX serverLocation, 
         CoCreateInstanceEx(requestedClass, nullptr, serverLocation, &requestedServerInfo, 1, &reqInterface);
     if (FAILED(result))
     {
-        printf("create instance error %x\n", result);
-        throw OPCException(L"COPCHost::makeCOMObjectEx: FAILED to get remote interface");
+        return result;
     } // if
 
     *interfacePtr = reqInterface.pItf; // avoid ref counter getting incremented again
-
+    return S_OK;
 } // COPCHost::makeCOMObjectEx
 
-void COPCHost::getListOfDAServersEx(std::wstring hostName, tagCLSCTX serverLocation, CATID cid,
+HRESULT COPCHost::getListOfDAServersEx(std::wstring hostName, tagCLSCTX serverLocation, CATID cid,
                                     std::vector<std::wstring> &listOfProgIDs, std::vector<CLSID> &listOfClassIDs)
 {
     CATID implist[1] = {cid};
     ATL::CComPtr<IEnumCLSID> iEnum;
     ATL::CComPtr<IOPCServerList> iCatInfo;
-    makeCOMObjectEx(hostName, serverLocation, CLSID_OpcServerList, IID_IOPCServerList, (void **)&iCatInfo);
 
-    HRESULT result = iCatInfo->EnumClassesOfCategories(1, implist, 0, nullptr, &iEnum);
-    if (FAILED(result))
+    HRESULT ret= makeCOMObjectEx(hostName, serverLocation, CLSID_OpcServerList, IID_IOPCServerList, (void **)&iCatInfo);
+    if (FAILED(ret))
     {
-        throw OPCException(L"COPCHost::getListOfDAServersEx: FAILED to get enum for categeories");
+        return ret;
+    }
+
+    ret = iCatInfo->EnumClassesOfCategories(1, implist, 0, nullptr, &iEnum);
+    if (FAILED(ret))
+    {
+        return ret;
     }
 
     GUID classID = {0, 0, 0, {0}};
     ULONG actual = 0;
-    while ((result = iEnum->Next(1, &classID, &actual)) == S_OK)
+    while ((ret = iEnum->Next(1, &classID, &actual)) == S_OK)
     {
-        (void)result; // mutes clang complaints..
         LPOLESTR progID = nullptr;
         LPOLESTR userType = nullptr;
-        result = iCatInfo->GetClassDetails(classID, &progID, &userType); // ProgIDFromCLSID ( classID, &progID )
-
-        if (FAILED(result))
+        ret = iCatInfo->GetClassDetails(classID, &progID, &userType); // ProgIDFromCLSID ( classID, &progID )
+        if (FAILED(ret))
         {
-            throw OPCException(L"COPCHost::getListOfDAServersEx: FAILED to get prog ID from class ID");
+            return ret;
         }
         else
         {
@@ -110,13 +111,11 @@ void COPCHost::getListOfDAServersEx(std::wstring hostName, tagCLSCTX serverLocat
             listOfProgIDs.push_back(progID);
 
             LPOLESTR classIDStr = nullptr;
-            result = StringFromCLSID(classID, &classIDStr);
-            if (FAILED(result))
+            ret = StringFromCLSID(classID, &classIDStr);
+            if (FAILED(ret))
             {
-                throw OPCException(L"COPCHost::getListOfDAServersEx: FAILED to get class ID string from class ID");
+                return ret;
             }
-
-            printf("prog ID: '%ws' - class ID: %ws\n", progID, classIDStr);
 
             COPCClient::comFree(progID);
             COPCClient::comFree(userType);
@@ -197,24 +196,27 @@ CLSID CRemoteHost::GetCLSIDFromRemoteRegistry(const std::wstring &hostName, cons
 COPCServer *CRemoteHost::connectDAServer(const CLSID &serverClassID)
 {
     ATL::CComPtr<IUnknown> iUnknown;
-    makeCOMObjectEx(HostName, CLSCTX_REMOTE_SERVER, serverClassID, IID_IUnknown, (void **)&iUnknown);
-    ATL::CComPtr<IOPCServer> iOpcServer;
-
-    HRESULT result = iUnknown->QueryInterface(IID_IOPCServer, (void **)&iOpcServer);
+    HRESULT result;
+    result = makeCOMObjectEx(HostName, CLSCTX_REMOTE_SERVER, serverClassID, IID_IUnknown, (void **)&iUnknown);
     if (FAILED(result))
     {
-        throw OPCException(L"CRemoteHost::connectDAServer: FAILED to obtain IID_IOPCServer interface from server");
+        return nullptr;
+    }
+
+    ATL::CComPtr<IOPCServer> iOpcServer;
+    result = iUnknown->QueryInterface(IID_IOPCServer, (void **)&iOpcServer);
+    if (FAILED(result))
+    {
+        return nullptr;
     }
 
     return new COPCServer(iOpcServer);
-
 } // CRemoteHost::connectDAServer
 
-void CRemoteHost::getListOfDAServers(CATID cid, std::vector<std::wstring> &listOfProgIDs,
+HRESULT CRemoteHost::getListOfDAServers(CATID cid, std::vector<std::wstring> &listOfProgIDs,
                                      std::vector<CLSID> &listOfClassIDs)
 {
-    getListOfDAServersEx(HostName, CLSCTX_REMOTE_SERVER, cid, listOfProgIDs, listOfClassIDs);
-
+    return getListOfDAServersEx(HostName, CLSCTX_REMOTE_SERVER, cid, listOfProgIDs, listOfClassIDs);
 } // CRemoteHost::getListOfDAServers
 
 CLSID CRemoteHost::getCLSID(const std::wstring &serverProgID)
@@ -300,10 +302,10 @@ COPCServer *CLocalHost::connectDAServer(const CLSID &clsid)
 
 } // CLocalHost::connectDAServer
 
-void CLocalHost::getListOfDAServers(CATID cid, std::vector<std::wstring> &listOfProgIDs,
+HRESULT CLocalHost::getListOfDAServers(CATID cid, std::vector<std::wstring> &listOfProgIDs,
                                     std::vector<CLSID> &listOfClassIDs)
 {
-    getListOfDAServersEx(L"localhost", CLSCTX_LOCAL_SERVER, cid, listOfProgIDs, listOfClassIDs);
+    return getListOfDAServersEx(L"localhost", CLSCTX_LOCAL_SERVER, cid, listOfProgIDs, listOfClassIDs);
 
 } // CLocalHost::getListOfDAServers
 

@@ -52,7 +52,6 @@ COPCGroup *COPCServer::makeGroup(const std::wstring &groupName, bool active, uns
                                  unsigned long &revisedUpdateRate_ms, float deadBand)
 {
     return new COPCGroup(groupName, active, reqUpdateRate_ms, revisedUpdateRate_ms, deadBand, *this);
-
 } // COPCServer::makeGroup
 
 bool COPCServer::getItemNames(std::vector<std::wstring> &opcItemNames)

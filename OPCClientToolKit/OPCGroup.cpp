@@ -27,6 +27,8 @@ namespace opcda_client
 {
 #endif
 
+#include <iostream>
+
 /**
  * Handles OPC (DCOM) callbacks at the group level. It deals with the receipt of data from asynchronous operations.
  * This is a fake COM object.
@@ -129,7 +131,8 @@ class CAsyncDataCallback : public IOPCDataCallback
 
             else
             {
-                throw OPCException(L"CAsyncDataCallback::OnDataChange: FAILED to lookup transaction ID in map");
+                
+                OPCException(L"CAsyncDataCallback::OnDataChange: FAILED to lookup transaction ID in map");
             }
         } // if
 
@@ -299,7 +302,7 @@ OPCHANDLE *COPCGroup::buildServerHandleList(std::vector<COPCItem *> &items)
         if (!items[i])
         {
             delete[] handles;
-            throw OPCException(L"COPCGroup::buildServerHandleList: item is nullptr");
+            return nullptr;
         } // if
 
         handles[i] = items[i]->getHandle();
@@ -312,16 +315,26 @@ OPCHANDLE *COPCGroup::buildServerHandleList(std::vector<COPCItem *> &items)
 void COPCGroup::readSync(std::vector<COPCItem *> &items, COPCItemDataMap &itemDataMap, OPCDATASOURCE source)
 {
     OPCHANDLE *handles = buildServerHandleList(items);
+    if (handles == nullptr)
+    {
+        std::cout << "build server handle list failed" << std::endl;
+        return;
+    }
+
     HRESULT *results = nullptr;
     OPCITEMSTATE *states = nullptr;
     DWORD nbrItems = static_cast<DWORD>(items.size());
 
+    
     HRESULT result = iSyncIO->Read(source, nbrItems, handles, &states, &results);
     if (FAILED(result))
     {
         delete[] handles;
-        throw OPCException(L"COPCGroup::readSync: sync read FAILED");
+        std::cout << "read failed" << std::endl;
+        //return;
     } // if
+
+    
 
     for (unsigned i = 0; i < nbrItems; ++i)
     {
@@ -342,7 +355,6 @@ void COPCGroup::readSync(std::vector<COPCItem *> &items, COPCItemDataMap &itemDa
     delete[] handles;
     COPCClient::comFree(results);
     COPCClient::comFree(states);
-
 } // COPCGroup::readSync
 
 CTransaction *COPCGroup::readAsync(std::vector<COPCItem *> &items, ITransactionComplete *transactionCB)
@@ -434,7 +446,6 @@ COPCItem *COPCGroup::addItem(std::wstring &name, bool active)
     }
 
     return items[0];
-
 } // COPCGroup::addItem
 
 int COPCGroup::addItems(std::vector<std::wstring> &names, std::vector<COPCItem *> &items, std::vector<HRESULT> &errors,
@@ -471,8 +482,11 @@ int COPCGroup::addItems(std::vector<std::wstring> &names, std::vector<COPCItem *
 
     if (FAILED(result))
     {
-        throw OPCException(L"COPCGroup::addItems: FAILED to add items");
+        std::cout << "fail to add items" << std::endl;
+        //return result;
     }
+
+    //std::cout << "add items successfully" << std::endl;
 
     int errorCount = 0;
     for (unsigned i = 0; i < nbrItems; ++i)
@@ -500,7 +514,6 @@ int COPCGroup::addItems(std::vector<std::wstring> &names, std::vector<COPCItem *
     COPCClient::comFree(details);
     COPCClient::comFree(results);
     return errorCount;
-
 } // COPCGroup::addItems
 
 OPCHANDLE COPCGroup::addItemData(COPCItemDataMap &opcItemDataMap, COPCItem *item, HRESULT error)
@@ -585,7 +598,6 @@ bool COPCGroup::enableAsync(IAsyncDataCallback *handler)
 
     UserAsyncCBHandler = handler;
     return true;
-
 } // COPCGroup::enableAsync
 
 void COPCGroup::setState(DWORD reqUpdateRate_ms, DWORD &returnedUpdateRate_ms, float deadBand, BOOL active)

@@ -21,15 +21,16 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{169E1B60-878B-4237-95FF-065DD5F36180}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
@@ -101,6 +102,9 @@
     <Lib>
       <OutputFile>$(OutDir)OPCClientToolKit32D.lib</OutputFile>
     </Lib>
+    <Link>
+      <ModuleDefinitionFile>test.def</ModuleDefinitionFile>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
@@ -133,6 +137,10 @@
     <Lib>
       <OutputFile>$(OutDir)OPCClientToolKit32.lib</OutputFile>
     </Lib>
+    <Link>
+      <ModuleDefinitionFile>
+      </ModuleDefinitionFile>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
@@ -151,6 +159,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="encoding.cpp" />
     <ClCompile Include="OPCClient.cpp" />
     <ClCompile Include="opccomn_i.c" />
     <ClCompile Include="OPCDaClientDemo.cpp" />
@@ -163,9 +172,13 @@
     <ClCompile Include="OPCProperties.cpp" />
     <ClCompile Include="OPCServer.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="clientDll.cpp" />
     <ClCompile Include="Transaction.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="encoding.h" />
+    <ClInclude Include="error.h" />
+    <ClInclude Include="json.h" />
     <ClInclude Include="OPCClient.h" />
     <ClInclude Include="opccomn.h" />
     <ClInclude Include="opcda.h" />
@@ -177,10 +190,12 @@
     <ClInclude Include="OPCProperties.h" />
     <ClInclude Include="OPCServer.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="clientDll.h" />
     <ClInclude Include="Transaction.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
+    <None Include="test.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

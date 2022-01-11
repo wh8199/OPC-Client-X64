@@ -22,6 +22,9 @@ Boston, MA  02111-1307, USA.
 
 #pragma warning(disable : 4251) // can be ignored if deriving from a type in the Standard C++ Library..
 
+#ifndef OPCCLIENT_H
+#define OPCCLIENT_H
+
 #include <COMCat.h>
 #include <atlbase.h>
 #include <atlcoll.h>
@@ -29,10 +32,12 @@ Boston, MA  02111-1307, USA.
 #include <atlstr.h>
 #include <objbase.h>
 #include <stdexcept>
+#include <unordered_map>
 
 #include "OPCClientToolKitDLL.h"
 #include "OPCItemData.h"
 #include "opcda.h"
+
 
 #ifdef OPCDA_CLIENT_NAMESPACE
 namespace opcda_client
@@ -92,10 +97,37 @@ enum OPCOLEInitMode
     MULTITHREADED
 }; // OPCOLEInitMode
 
+class ReadResult
+{
+  private:
+    char type;
+    bool ok;
+    std::string val;
+    std::string errormsg;
+
+  public:
+    ReadResult();
+    ReadResult(const ReadResult &ret);
+    ReadResult(char type, bool ok, std::string val, std::string errormsg);
+
+    static std::string String(const ReadResult &ret);
+    static std::string String(std::unordered_map<std::string, ReadResult> retMap);
+    static std::string String(std::vector<ReadResult> retVector);
+
+    char GetType();
+    bool GetOK();
+    std::string GetVal();
+    std::string GetError();
+};
+
+
 class OPCDACLIENT_API COPCClient
 {
   private:
     static ATL::CComPtr<IMalloc> iMalloc;
+    COPCHost *host;
+    COPCServer *opcServer;
+    COPCGroup *demoGroup;
 
   public:
     static int ReleaseCount;
@@ -114,13 +146,21 @@ class OPCDACLIENT_API COPCClient
      * @ returns host object (owned by caller).
      */
     static COPCHost *makeHost(const std::wstring &hostName);
-
     static const GUID CATID_OPCDAv10;
-
     static const GUID CATID_OPCDAv20;
-
+    
+    
+    static CLSID SearchClassID(const std::wstring &progId, const std::wstring &server, 
+        COPCHost *host, bool *found);
+    int Init(std::wstring progId, std::wstring server);
+    ReadResult *ReadItem(std::wstring item);
+    static std::string VariantToString(const OPCItemData &data);
+    ~COPCClient();
 }; // COPCClient
+
 
 #ifdef OPCDA_CLIENT_NAMESPACE
 } // namespace opcda_client
+#endif
+
 #endif

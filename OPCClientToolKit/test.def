@@ -1,0 +1,5 @@
+LIBRARY DllOPCClientToolKit
+EXPORTS
+	Readitem    @1
+	Readitems   @2
+	Freeresult  @3

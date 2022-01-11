@@ -100,7 +100,7 @@ class OPCDACLIENT_API COPCHost
     /**
      * utility to create COM object instance
      */
-    void makeCOMObjectEx(std::wstring hostName, tagCLSCTX serverLocation, const IID requestedClass,
+    HRESULT makeCOMObjectEx(std::wstring hostName, tagCLSCTX serverLocation, const IID requestedClass,
                          const IID requestedInterface, void **interfacePtr);
 
     /**
@@ -108,7 +108,7 @@ class OPCDACLIENT_API COPCHost
      * @param cid the version of the OPC servers to browse
      * @param listOfProgIDs list of servers of version cid on this host
      */
-    void getListOfDAServersEx(std::wstring hostName, tagCLSCTX serverLocation, CATID cid,
+    HRESULT getListOfDAServersEx(std::wstring hostName, tagCLSCTX serverLocation, CATID cid,
                               std::vector<std::wstring> &listOfProgIDs, std::vector<CLSID> &listOfClassIDs);
 
   public:
@@ -121,7 +121,7 @@ class OPCDACLIENT_API COPCHost
      * @param cid the version of the OPC servers to browse
      * @param listOfProgIDs list of servers of version cid on this host
      */
-    virtual void getListOfDAServers(CATID cid, std::vector<std::wstring> &listOfProgIDs,
+    virtual HRESULT getListOfDAServers(CATID cid, std::vector<std::wstring> &listOfProgIDs,
                                     std::vector<CLSID> &listOfClassIDs) = 0;
 
     virtual CLSID getCLSID(const std::wstring &serverProgID) = 0;
@@ -156,7 +156,7 @@ class OPCDACLIENT_API CRemoteHost : public COPCHost
      * @param cid the version of the OPC servers to browse
      * @param listOfProgIDs list of servers of version cid on this host
      */
-    void getListOfDAServers(CATID cid, std::vector<std::wstring> &listOfProgIDs, std::vector<CLSID> &listOfClassIDs);
+    HRESULT getListOfDAServers(CATID cid, std::vector<std::wstring> &listOfProgIDs, std::vector<CLSID> &listOfClassIDs);
 
     CLSID getCLSID(const std::wstring &serverProgID);
 
@@ -188,7 +188,7 @@ class OPCDACLIENT_API CLocalHost : public COPCHost
      * @param cid the version of the OPC servers to browse
      * @param listOfProgIDs list of servers of version cid on this host
      */
-    void getListOfDAServers(CATID cid, std::vector<std::wstring> &listOfProgIDs, std::vector<CLSID> &listOfClassIDs);
+    HRESULT getListOfDAServers(CATID cid, std::vector<std::wstring> &listOfProgIDs, std::vector<CLSID> &listOfClassIDs);
 
     CLSID getCLSID(const std::wstring &serverProgID);
 

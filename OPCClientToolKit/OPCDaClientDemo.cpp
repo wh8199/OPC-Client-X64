@@ -28,6 +28,7 @@ Boston, MA  02111-1307, USA.
 #include "OPCItem.h"
 #include "OPCServer.h"
 #include "opcda.h"
+#include "encoding.h"
 
 /**
  * Code demonstrates
@@ -54,11 +55,14 @@ void main(void)
     // to find
     // reason
     char c_string[100] = {0};
+    std::string remote = "localhost";
     gets_s(c_string);
-    if (!strlen(c_string))
+
+    if (strlen(c_string) > 0)
     {
-        strcpy_s(c_string, sizeof(c_string), "localhost");
+        remote = std::string(c_string);
     }
+
     COPCHost *host = COPCClient::makeHost(COPCHost::S2WS(c_string));
 
     // list servers
@@ -85,12 +89,11 @@ void main(void)
         server_id = atol(c_string);
     }
     std::wstring serverName = localServerList[server_id];
-    printf("server name: '%ws'\n", serverName.c_str());
+    printf("server name1: '%ws'\n", serverName.c_str());
 
-    /*
     COPCClient c;
-    int ret = c.Init(localServerList[server_id], c_string);
-    if (ret < 0)
+    int ret = c.Init(localServerList[server_id], COPCHost::S2WS(remote));
+    if (ret !=  S_OK)
     {
         perror("init opc client failed");
         exit(-1);
@@ -106,13 +109,12 @@ void main(void)
         }
 
         // make a single item
-        std::wstring itemName = COPCHost::S2WS(c_string);
-        ret = c.ReadItem(std::move(itemName));
-        if (ret < 0)
-        {
-            perror("read item failed");
-        }
-    }*/
+        std::wstring itemName = A2U(c_string);
+
+        ReadResult *ret = c.ReadItem(std::move(itemName));
+        std::cout << ReadResult::String(*ret) << std::endl;
+        delete (ret);
+    }
 
     /*
     // get properties
